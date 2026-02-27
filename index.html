@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM Vendas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #f8fafc; min-height: 100vh; }
+
+    /* HEADER */
+    #header {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 0 24px; display: flex; align-items: center;
+      justify-content: space-between; height: 60px; gap: 16px; position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo-icon {
+      width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 16px;
+    }
+    .logo-text { font-weight: 800; font-size: 18px; color: #1e293b; letter-spacing: -0.02em; }
+    .tabs { display: flex; gap: 4px; }
+    .tab-btn {
+      padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer;
+      font-size: 13px; font-weight: 600; background: transparent; color: #64748b;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .tab-btn.active { background: #3b82f6; color: #fff; }
+    .btn-primary {
+      background: #3b82f6; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 18px; cursor: pointer; font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .btn-primary:hover { background: #2563eb; }
+
+    /* TABS CONTENT */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* STATS */
+    .stats { display: flex; gap: 16px; padding: 20px 24px 8px; flex-wrap: wrap; }
+    .stat-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 14px 20px; min-width: 150px; flex: 1;
+    }
+    .stat-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 22px; font-weight: 800; margin-top: 4px; }
+
+    /* KANBAN */
+    .kanban { display: flex; gap: 12px; padding: 12px 24px 24px; overflow-x: auto; }
+    .kanban-col {
+      min-width: 220px; flex: 0 0 220px; background: #f1f5f9;
+      border-radius: 12px; padding: 12px; border: 2px solid transparent; transition: all 0.15s;
+    }
+    .kanban-col.drag-over { border: 2px dashed #3b82f6; }
+    .col-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .col-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #1e293b; }
+    .col-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .col-count { font-size: 12px; font-weight: 700; color: #94a3b8; background: #fff; border-radius: 20px; padding: 2px 8px; }
+    .col-empty { text-align: center; color: #cbd5e1; font-size: 12px; padding: 20px 0; }
+
+    /* LEAD CARD */
+    .lead-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: box-shadow 0.15s, transform 0.15s;
+      user-select: none;
+    }
+    .lead-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-1px); }
+    .lead-name { font-weight: 600; font-size: 14px; color: #1e293b; margin-bottom: 2px; }
+    .lead-empresa { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .lead-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+    .lead-valor { font-size: 13px; font-weight: 700; }
+    .lead-email { font-size: 11px; color: #94a3b8; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* MODAL */
+    .modal-bg {
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55);
+      align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px);
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 16px; padding: 28px;
+      width: min(520px, 95vw); max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+    .modal-close { background: none; border: none; cursor: pointer; font-size: 20px; color: #94a3b8; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 14px; outline: none; color: #1e293b; font-family: inherit; background: #fff;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #3b82f6; }
+    .field textarea { resize: vertical; }
+    .modal-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; }
+    .btn-danger { padding: 10px 18px; background: #fef2f2; color: #ef4444; border: 1.5px solid #fecaca; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-secondary { padding: 10px 18px; background: #f8fafc; color: #64748b; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-save { padding: 10px 22px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; }
+
+    /* VENDAS */
+    .vendas-wrap { max-width: 680px; margin: 24px auto; padding: 0 24px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .card-title { font-weight: 700; font-size: 15px; color: #1e293b; margin-bottom: 14px; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .form-row input, .form-row select {
+      padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 14px; outline: none; color: #1e293b; font-family: inherit;
+    }
+    .form-row input:focus { border-color: #3b82f6; }
+    .input-desc { flex: 2; min-width: 160px; }
+    .input-valor { flex: 1; min-width: 120px; }
+    .btn-green { padding: 9px 18px; background: #10b981; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 14px; }
+    .total-box {
+      background: linear-gradient(135deg, #10b981, #059669); border-radius: 12px;
+      padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .total-label { color: rgba(255,255,255,0.85); font-weight: 600; font-size: 13px; }
+    .total-value { color: #fff; font-weight: 800; font-size: 22px; }
+    .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .day-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #1e293b; }
+    .badge-hoje { font-size: 11px; background: #eff6ff; color: #3b82f6; font-weight: 700; border-radius: 20px; padding: 2px 8px; }
+    .day-total { font-size: 14px; font-weight: 800; color: #10b981; }
+    .venda-item {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 11px 16px; margin-bottom: 6px; display: flex; align-items: center; gap: 12;
+    }
+    .venda-desc { flex: 1; font-size: 14px; color: #1e293b; }
+    .venda-val { font-size: 14px; font-weight: 700; color: #10b981; }
+    .btn-del { background: none; border: none; cursor: pointer; color: #cbd5e1; font-size: 16px; padding: 0 2px; }
+    .btn-del:hover { color: #ef4444; }
+    .empty { text-align: center; color: #94a3b8; padding: 40px; background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; }
+
+    /* PENDENCIAS */
+    .pend-wrap { max-width: 700px; margin: 24px auto; padding: 0 24px; }
+    .prio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .prio-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .prio-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    .prio-count { font-size: 11px; color: #94a3b8; }
+    .pend-item {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;
+      transition: opacity 0.2s;
+    }
+    .pend-item.done { opacity: 0.5; }
+    .pend-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+    .pend-text { flex: 1; font-size: 14px; color: #1e293b; }
+    .pend-text.done { text-decoration: line-through; }
+    .pend-date { font-size: 11px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">◆</div>
+    <span class="logo-text">CRM Vendas</span>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('crm')">🗂 Funil</button>
+    <button class="tab-btn" id="tab-vendas" onclick="setTab('vendas')">💰 Vendas</button>
+    <button class="tab-btn" id="tab-pend" onclick="setTab('pendencias')">📋 Pendências</button>
+  </div>
+  <button class="btn-primary" onclick="openLeadModal()">+ Novo Lead</button>
+</div>
+
+<!-- TAB: FUNIL -->
+<div id="tab-crm" class="tab-content active">
+  <div class="stats" id="stats"></div>
+  <div class="kanban" id="kanban"></div>
+</div>
+
+<!-- TAB: VENDAS -->
+<div id="tab-vendas-content" class="tab-content">
+  <div class="vendas-wrap">
+    <div class="card">
+      <div class="card-title">Registrar Venda</div>
+      <div class="form-row">
+        <input class="input-desc" type="text" id="venda-desc" placeholder="Descrição da venda..." onkeydown="if(event.key==='Enter')addVenda()" />
+        <input class="input-valor" type="text" id="venda-valor" placeholder="R$ 0,00" oninput="maskBRL(this)" onkeydown="if(event.key==='Enter')addVenda()" />
+        <input type="date" id="venda-data" />
+        <button class="btn-green" onclick="addVenda()">+ Add</button>
+      </div>
+    </div>
+    <div id="vendas-list"></div>
+  </div>
+</div>
+
+<!-- TAB: PENDENCIAS -->
+<div id="tab-pendencias-content" class="tab-content">
+  <div class="pend-wrap">
+    <div class="card">
+      <div class="card-title">Nova Pendência</div>
+      <div class="form-row">
+        <input style="flex:1;min-width:160px" type="text" id="pend-titulo" placeholder="Descreva a pendência..." onkeydown="if(event.key==='Enter')addPendencia()" />
+        <select id="pend-prio">
+          <option>Alta</option><option selected>Média</option><option>Baixa</option>
+        </select>
+        <button class="btn-primary" onclick="addPendencia()">+ Add</button>
+      </div>
+    </div>
+    <div id="pend-list"></div>
+  </div>
+</div>
+
+<!-- MODAL LEAD -->
+<div class="modal-bg" id="lead-modal" onclick="if(event.target===this)closeLeadModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Novo Lead</span>
+      <button class="modal-close" onclick="closeLeadModal()">✕</button>
+    </div>
+    <div class="field"><label>Nome</label><input type="text" id="f-nome" /></div>
+    <div class="field"><label>Empresa</label><input type="text" id="f-empresa" /></div>
+    <div class="field"><label>Telefone</label><input type="text" id="f-telefone" /></div>
+    <div class="field"><label>E-mail</label><input type="email" id="f-email" /></div>
+    <div class="field"><label>Valor do Negócio</label><input type="text" id="f-valor" placeholder="R$ 0,00" oninput="maskBRL(this)" /></div>
+    <div class="field">
+      <label>Etapa</label>
+      <select id="f-stage">
+        <option value="prospeccao">Prospecção</option>
+        <option value="contato">Em Contato</option>
+        <option value="proposta">Proposta</option>
+        <option value="negociacao">Negociação</option>
+        <option value="fechado">Fechado ✓</option>
+        <option value="perdido">Perdido ✗</option>
+      </select>
+    </div>
+    <div class="field"><label>Notas</label><textarea id="f-notas" rows="3"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="btn-excluir" onclick="deleteLead()" style="display:none">Excluir</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn-secondary" onclick="closeLeadModal()">Cancelar</button>
+        <button class="btn-save" onclick="saveLead()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────
+const STAGES = [
+  { id: "prospeccao", label: "Prospecção",  color: "#64748b" },
+  { id: "contato",    label: "Em Contato",  color: "#3b82f6" },
+  { id: "proposta",   label: "Proposta",    color: "#f59e0b" },
+  { id: "negociacao", label: "Negociação",  color: "#8b5cf6" },
+  { id: "fechado",    label: "Fechado ✓",   color: "#10b981" },
+  { id: "perdido",    label: "Perdido ✗",   color: "#ef4444" },
+];
+const PRIO_COLORS = { Alta: "#ef4444", Média: "#f59e0b", Baixa: "#10b981" };
+
+let leads     = JSON.parse(localStorage.getItem("crm-leads")     || "[]");
+let pendencias= JSON.parse(localStorage.getItem("crm-pendencias")|| "[]");
+let vendas    = JSON.parse(localStorage.getItem("crm-vendas")    || "[]");
+let editingId = null;
+let dragId    = null;
+
+function save() {
+  localStorage.setItem("crm-leads",      JSON.stringify(leads));
+  localStorage.setItem("crm-pendencias", JSON.stringify(pendencias));
+  localStorage.setItem("crm-vendas",     JSON.stringify(vendas));
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function todayISO() { return new Date().toISOString().split("T")[0]; }
+function todayBR()  { return new Date().toLocaleDateString("pt-BR"); }
+function fmtISO(iso){ const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
+
+function parseBRL(str="") {
+  return parseFloat(str.replace(/[R$\s.]/g,"").replace(",",".")) || 0;
+}
+function maskBRL(input) {
+  const digits = input.value.replace(/\D/g,"");
+  if (!digits) { input.value=""; return; }
+  input.value = (parseInt(digits)/100).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+
+// ── TABS ──────────────────────────────────────────────────
+function setTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+  const map = { crm:"tab-crm", vendas:"tab-vendas-content", pendencias:"tab-pendencias-content" };
+  document.getElementById(map[tab]).classList.add("active");
+  event.currentTarget.classList.add("active");
+  if(tab==="crm") renderKanban();
+  if(tab==="vendas") renderVendas();
+  if(tab==="pendencias") renderPendencias();
+}
+
+// ── KANBAN ────────────────────────────────────────────────
+function renderKanban() {
+  // stats
+  const totalFechado = leads.filter(l=>l.stage==="fechado").reduce((a,l)=>a+parseBRL(l.valor),0);
+  document.getElementById("stats").innerHTML = [
+    ["Total de Leads", leads.length, "#3b82f6"],
+    ["Fechados", leads.filter(l=>l.stage==="fechado").length, "#10b981"],
+    ["Em andamento", leads.filter(l=>!["fechado","perdido"].includes(l.stage)).length, "#8b5cf6"],
+    ["Receita Fechada", totalFechado.toLocaleString("pt-BR",{style:"currency",currency:"BRL"}), "#f59e0b"],
+  ].map(([label,val,color])=>`
+    <div class="stat-card">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value" style="color:${color}">${val}</div>
+    </div>`).join("");
+
+  // kanban
+  document.getElementById("kanban").innerHTML = STAGES.map(stage=>{
+    const stageLeads = leads.filter(l=>l.stage===stage.id);
+    const cards = stageLeads.length
+      ? stageLeads.map(lead=>`
+          <div class="lead-card" draggable="true"
+            ondragstart="dragStart(event,'${lead.id}')"
+            onclick="openLeadModal('${lead.id}')">
+            <div class="lead-name">${lead.nome||"Sem nome"}</div>
+            ${lead.empresa?`<div class="lead-empresa">${lead.empresa}</div>`:""}
+            <div class="lead-footer">
+              ${lead.valor
+                ?`<span class="lead-valor" style="color:${stage.color}">${lead.valor}</span>`
+                :`<span style="font-size:12px;color:#cbd5e1">Sem valor</span>`}
+              ${lead.email?`<span class="lead-email">${lead.email}</span>`:""}
+            </div>
+          </div>`).join("")
+      : `<div class="col-empty">Arraste um lead aqui</div>`;
+
+    return `
+      <div class="kanban-col" id="col-${stage.id}"
+        ondragover="event.preventDefault();document.getElementById('col-${stage.id}').classList.add('drag-over')"
+        ondragleave="document.getElementById('col-${stage.id}').classList.remove('drag-over')"
+        ondrop="dropLead(event,'${stage.id}')">
+        <div class="col-header">
+          <div class="col-title">
+            <div class="col-dot" style="background:${stage.color}"></div>
+            ${stage.label}
+          </div>
+          <span class="col-count">${stageLeads.length}</span>
+        </div>
+        ${cards}
+      </div>`;
+  }).join("");
+}
+
+function dragStart(e, id) { dragId=id; e.dataTransfer.effectAllowed="move"; }
+function dropLead(e, stageId) {
+  e.preventDefault();
+  document.getElementById("col-"+stageId).classList.remove("drag-over");
+  if(!dragId) return;
+  leads = leads.map(l => l.id===dragId ? {...l, stage:stageId} : l);
+  dragId = null;
+  save(); renderKanban();
+}
+
+// ── LEAD MODAL ────────────────────────────────────────────
+function openLeadModal(id) {
+  editingId = id || null;
+  const lead = id ? leads.find(l=>l.id===id) : {};
+  document.getElementById("modal-title").textContent = id ? "Editar Lead" : "Novo Lead";
+  document.getElementById("btn-excluir").style.display = id ? "block" : "none";
+  ["nome","empresa","telefone","email","valor","notas"].forEach(k=>{
+    document.getElementById("f-"+k).value = lead[k]||"";
+  });
+  document.getElementById("f-stage").value = lead.stage||"prospeccao";
+  document.getElementById("lead-modal").classList.add("open");
+}
+function closeLeadModal() { document.getElementById("lead-modal").classList.remove("open"); }
+
+function saveLead() {
+  const lead = {
+    id: editingId || Date.now().toString(),
+    nome:     document.getElementById("f-nome").value,
+    empresa:  document.getElementById("f-empresa").value,
+    telefone: document.getElementById("f-telefone").value,
+    email:    document.getElementById("f-email").value,
+    valor:    document.getElementById("f-valor").value,
+    stage:    document.getElementById("f-stage").value,
+    notas:    document.getElementById("f-notas").value,
+    createdAt: editingId ? leads.find(l=>l.id===editingId)?.createdAt : todayBR(),
+  };
+  if(editingId) leads = leads.map(l=>l.id===editingId?lead:l);
+  else leads.push(lead);
+  save(); closeLeadModal(); renderKanban(); updateTabBadges();
+}
+function deleteLead() {
+  leads = leads.filter(l=>l.id!==editingId);
+  save(); closeLeadModal(); renderKanban(); updateTabBadges();
+}
+
+// ── VENDAS ────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById("venda-data").value = todayISO();
+});
+
+function addVenda() {
+  const desc  = document.getElementById("venda-desc").value.trim();
+  const valor = document.getElementById("venda-valor").value;
+  const data  = document.getElementById("venda-data").value;
+  if(!desc || !valor) return;
+  vendas.push({ id: Date.now().toString(), descricao:desc, valor, data });
+  document.getElementById("venda-desc").value = "";
+  document.getElementById("venda-valor").value = "";
+  save(); renderVendas(); updateTabBadges();
+}
+
+function deleteVenda(id) {
+  vendas = vendas.filter(v=>v.id!==id);
+  save(); renderVendas(); updateTabBadges();
+}
+
+function renderVendas() {
+  const container = document.getElementById("vendas-list");
+  if(!vendas.length) { container.innerHTML=`<div class="empty">Nenhuma venda registrada ainda.</div>`; return; }
+
+  const totalGeral = vendas.reduce((a,v)=>a+parseBRL(v.valor),0);
+  const grouped = vendas.reduce((acc,v)=>{ (acc[v.data]=acc[v.data]||[]).push(v); return acc; },{});
+  const dates = Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+
+  container.innerHTML = `
+    <div class="total-box">
+      <span class="total-label">TOTAL GERAL</span>
+      <span class="total-value">${totalGeral.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</span>
+    </div>
+    ${dates.map(date=>{
+      const items = grouped[date];
+      const total = items.reduce((a,v)=>a+parseBRL(v.valor),0);
+      const isToday = date===todayISO();
+      return `
+        <div style="margin-bottom:20px">
+          <div class="day-header">
+            <div class="day-title">
+              ${fmtISO(date)}
+              ${isToday?`<span class="badge-hoje">hoje</span>`:""}
+            </div>
+            <span class="day-total">${total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</span>
+          </div>
+          ${items.map(v=>`
+            <div class="venda-item">
+              <span style="font-size:18px">💰</span>
+              <span class="venda-desc">${v.descricao}</span>
+              <span class="venda-val">${v.valor}</span>
+              <button class="btn-del" onclick="deleteVenda('${v.id}')">✕</button>
+            </div>`).join("")}
+        </div>`;
+    }).join("")}`;
+}
+
+// ── PENDÊNCIAS ────────────────────────────────────────────
+function addPendencia() {
+  const titulo = document.getElementById("pend-titulo").value.trim();
+  const prio   = document.getElementById("pend-prio").value;
+  if(!titulo) return;
+  pendencias.push({ id: Date.now().toString(), titulo, prioridade:prio, done:false, createdAt:todayBR() });
+  document.getElementById("pend-titulo").value = "";
+  save(); renderPendencias(); updateTabBadges();
+}
+function togglePend(id) {
+  pendencias = pendencias.map(p=>p.id===id?{...p,done:!p.done}:p);
+  save(); renderPendencias(); updateTabBadges();
+}
+function deletePend(id) {
+  pendencias = pendencias.filter(p=>p.id!==id);
+  save(); renderPendencias(); updateTabBadges();
+}
+
+function renderPendencias() {
+  const container = document.getElementById("pend-list");
+  if(!pendencias.length){ container.innerHTML=`<div class="empty">Nenhuma pendência cadastrada ainda.</div>`; return; }
+
+  let html = "";
+  ["Alta","Média","Baixa"].forEach(prio=>{
+    const list = pendencias.filter(p=>p.prioridade===prio);
+    if(!list.length) return;
+    html += `
+      <div style="margin-bottom:20px">
+        <div class="prio-header">
+          <div class="prio-dot" style="background:${PRIO_COLORS[prio]}"></div>
+          <span class="prio-label">Prioridade ${prio}</span>
+          <span class="prio-count">(${list.filter(p=>!p.done).length} abertas)</span>
+        </div>
+        ${list.map(p=>`
+          <div class="pend-item ${p.done?"done":""}">
+            <input type="checkbox" ${p.done?"checked":""} onchange="togglePend('${p.id}')"
+              style="accent-color:${PRIO_COLORS[prio]}" />
+            <span class="pend-text ${p.done?"done":""}">${p.titulo}</span>
+            <span class="pend-date">${p.createdAt}</span>
+            <button class="btn-del" onclick="deletePend('${p.id}')">✕</button>
+          </div>`).join("")}
+      </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ── BADGES ────────────────────────────────────────────────
+function updateTabBadges() {
+  const pendOpen = pendencias.filter(p=>!p.done).length;
+  document.getElementById("tab-pend").textContent =
+    `📋 Pendências${pendOpen>0?" ("+pendOpen+")":""}`;
+
+  const vendasHoje = vendas.filter(v=>v.data===todayISO()).length;
+  document.getElementById("tab-vendas").textContent =
+    `💰 Vendas${vendasHoje>0?" ●":""}`;
+}
+
+// ── INIT ──────────────────────────────────────────────────
+renderKanban();
+updateTabBadges();
+</script>
+</body>
+</html>
